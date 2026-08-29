@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>一年愛班座位安排工具</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC",sans-serif;
+  background:#f5f6f8;
+  color:#222;
+}
+header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:rgba(255,255,255,.96);
+  border-bottom:1px solid #ddd;
+  padding:12px 14px;
+}
+header h1{
+  font-size:20px;
+  margin:0;
+}
+header p{
+  margin:4px 0 0;
+  color:#777;
+  font-size:12px;
+}
+main{
+  max-width:1150px;
+  margin:auto;
+  padding:12px;
+}
+.toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-bottom:12px;
+}
+button{
+  border:1px solid #d5d9df;
+  background:#fff;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:15px;
+  font-weight:600;
+  touch-action:manipulation;
+}
+button.primary{
+  background:#2f7d62;
+  border-color:#2f7d62;
+  color:#fff;
+}
+button.active{
+  background:#fff2cc;
+  border-color:#d9aa00;
+}
+.page{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:12px;
+}
+.panel{
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:14px;
+  padding:12px;
+}
+.panel h2{
+  margin:0 0 10px;
+  font-size:17px;
+}
+#studentList{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.student{
+  padding:9px 7px;
+  text-align:left;
+  border-radius:9px;
+  font-size:14px;
+}
+.student.selected{
+  background:#dff2e9;
+  outline:3px solid #83c6a9;
+}
+.student.seated{
+  opacity:.4;
+}
+.tip{
+  font-size:13px;
+  color:#777;
+  margin-bottom:9px;
+}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+.controls input{
+  width:60px;
+  padding:8px;
+  font-size:16px;
+  border:1px solid #ccc;
+  border-radius:8px;
+}
+.front{
+  margin:3px auto 18px;
+  width:260px;
+  max-width:70%;
+  border:2px solid #555;
+  text-align:center;
+  padding:10px;
+  font-weight:700;
+  background:#fff;
+}
+.seatScroll{
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#seatGrid{
+  display:grid;
+  gap:8px;
+  justify-content:center;
+  min-width:max-content;
+}
+.seat{
+  width:110px;
+  height:76px;
+  border:2px solid #70757a;
+  border-radius:9px;
+  background:#fff;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.seat.empty{
+  color:#aaa;
+  border-style:dashed;
+}
+.seat.blocked{
+  background:#eee;
+  color:#aaa;
+  border-color:#bbb;
+  border-style:dashed;
+}
+.seat .num{
+  font-size:19px;
+  font-weight:800;
+}
+.seat .name{
+  font-size:14px;
+  margin-top:2px;
+}
+.section{
+  margin-top:12px;
+}
+.officers{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.officer label{
+  font-size:12px;
+  color:#666;
+}
+.officer select{
+  display:block;
+  width:100%;
+  margin-top:3px;
+  padding:8px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  background:#fff;
+}
+.history{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.historyItem{
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
+}
+.historyItem small{
+  display:block;
+  color:#777;
+  margin:4px 0 8px;
+}
+.printOnly{
+  display:none;
+}
+
+@media(max-width:800px){
+  .page{grid-template-columns:1fr}
+  #studentList{grid-template-columns:repeat(3,1fr)}
+  .officers{grid-template-columns:1fr 1fr}
+}
+
+@media(max-width:520px){
+  #studentList{grid-template-columns:1fr 1fr}
+  .seat{width:88px;height:68px}
+  .seat .num{font-size:17px}
+  .seat .name{font-size:13px}
+}
+
+@media print{
+  body{background:#fff}
+  header,.noPrint,#studentPanel,.officerPanel,.historyPanel,.controls{display:none!important}
+  main{padding:0}
+  .page{display:block}
+  #seatPanel{
+    border:0;
+    padding:0;
+  }
+  .printOnly{display:block}
+  .printTitle{
+    text-align:center;
+    font-size:20px;
+    font-weight:bold;
+    margin:4mm 0 4mm;
+  }
+  .printOfficers{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    border:1px solid #333;
+    margin-bottom:8mm;
+  }
+  .printOfficers div{
+    min-height:16mm;
+    border:1px solid #333;
+    text-align:center;
+    padding:3px;
+    font-size:10px;
+  }
+  .front{
+    margin-bottom:7mm;
+  }
+  #seatGrid{gap:3mm}
+  .seat{
+    width:29mm;
+    height:21mm;
+    border-radius:0;
+    border:1px solid #333;
+  }
+  .seat.blocked{visibility:hidden}
+  .seat.empty{border:1px solid #aaa}
+  .seat .num{font-size:13px}
+  .seat .name{font-size:11px}
+  @page{
+    size:A4 portrait;
+    margin:9mm;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>一年愛班座位安排工具</h1>
+  <p>iPhone / iPad：先點學生，再點想安排的座位</p>
+</header>
+
+<main>
+
+<div class="toolbar noPrint">
+  <button class="primary" id="saveHistory">儲存本次座位</button>
+  <button id="randomBtn">隨機安排</button>
+  <button id="numberBtn">依座號安排</button>
+  <button id="clearBtn">全部移回</button>
+  <button id="blockBtn">調整空位：關</button>
+  <button onclick="window.print()">列印 A4</button>
+</div>
+
+<div class="page">
+
+  <section class="panel" id="studentPanel">
+    <h2>學生名單</h2>
+    <div class="tip" id="message">請先點選一位學生。</div>
+    <div id="studentList"></div>
+  </section>
+
+  <section class="panel" id="seatPanel">
+
+    <div class="printOnly printTitle">一年愛班　班級座位表</div>
+    <div class="printOnly printOfficers" id="printOfficers"></div>
+
+    <div class="controls noPrint">
+      <span>橫向座位：</span>
+      <input id="colsInput" type="number" min="1" max="8" value="5">
+
+      <span>縱向列數：</span>
+      <input id="rowsInput" type="number" min="1" max="10" value="6">
+
+      <button id="resizeBtn">套用</button>
+    </div>
+
+    <div class="front">講　台</div>
+
+    <div class="seatScroll">
+      <div id="seatGrid"></div>
+    </div>
+
+    <div class="tip noPrint" style="margin-top:10px">
+      點已入座學生，再點另一座位，可直接換位。<br>
+      開啟「調整空位」後，點座位即可停用／恢復該座位。
+    </div>
+
+  </section>
+
+</div>
+
+<section class="panel section officerPanel noPrint">
+  <h2>班級幹部</h2>
+  <div class="officers" id="officers"></div>
+</section>
+
+<section class="panel section historyPanel noPrint">
+  <h2>最近 2 次座位紀錄</h2>
+  <div class="history" id="history"></div>
+</section>
+
+</main>
+
+<script>
+const students = [
+  [1,"朱家嵩"],
+  [2,"江羽翔"],
+  [3,"杜欣意"],
+  [4,"郭育辰"],
+  [5,"陳威廷"],
+  [6,"陳禹恆"],
+  [7,"彭宥翔"],
+  [8,"黃志瑋"],
+  [9,"黃冠宇"],
+  [10,"黃靖杉"],
+  [11,"劉子齊"],
+  [12,"劉羽宸"],
+  [13,"劉東彥"],
+  [14,"劉珈成"],
+  [15,"穆彥丞"],
+  [16,"平欣妮"],
+  [17,"田芳誼"],
+  [18,"郭瑋芯"],
+  [19,"陳品妡"],
+  [20,"陳庭瑰"],
+  [21,"傅宥慈"],
+  [22,"黃羽婕"],
+  [23,"黃采婕"],
+  [24,"黃姿芸"],
+  [25,"黃梓晴"],
+  [26,"劉子綺"],
+  [27,"謝雨霏"]
+].map(x => ({
+  id:String(x[0]),
+  no:x[0],
+  name:x[1]
+}));
+
+const officerNames = [
+  "班長",
+  "學藝股長",
+  "事務股長",
+  "衛生股長",
+  "保健股長",
+  "設備股長",
+  "副班長",
+  "風紀股長",
+  "輔導股長",
+  "體育股長",
+  "註冊圖書股長"
+];
+
+const STORE = "love_class_seat_planner_v1";
+
+let state = {
+  rows:6,
+  cols:5,
+  seats:{},
+  blocked:{},
+  selected:null,
+  blockMode:false,
+  officers:{},
+  history:[]
+};
+
+function load(){
+  try{
+    const x = JSON.parse(localStorage.getItem(STORE));
+    if(x) state = {...state,...x};
+  }catch(e){}
+}
+
+function save(){
+  localStorage.setItem(STORE,JSON.stringify(state));
+}
+
+function getStudent(id){
+  return students.find(s => s.id === String(id));
+}
+
+function seatKey(r,c){
+  return r+"-"+c;
+}
+
+function findSeatOfStudent(id){
+  return Object.keys(state.seats)
+    .find(k => String(state.seats[k]) === String(id));
+}
+
+function renderStudents(){
+
+  const box = document.getElementById("studentList");
+  box.innerHTML = "";
+
+  const seated = new Set(
+    Object.values(state.seats).map(String)
+  );
+
+  students.forEach(s => {
+
+    const b = document.createElement("button");
+
+    b.className = "student";
+
+    if(state.selected === s.id)
+      b.classList.add("selected");
+
+    if(seated.has(s.id))
+      b.classList.add("seated");
+
+    b.textContent = s.no + ". " + s.name;
+
+    b.onclick = function(){
+
+      if(state.blockMode) return;
+
+      if(state.selected === s.id){
+        state.selected = null;
+      }else{
+        state.selected = s.id;
+      }
+
+      render();
+    };
+
+    box.appendChild(b);
+  });
+
+  const msg = document.getElementById("message");
+
+  if(state.blockMode){
+    msg.textContent =
+      "目前為調整空位模式：請直接點座位。";
+  }else if(state.selected){
+    const s = getStudent(state.selected);
+
+    msg.textContent =
+      "已選擇：" + s.no + ". " + s.name +
+      "，請點想安排的位置。";
+  }else{
+    msg.textContent =
+      "請先點選一位學生。";
+  }
+}
+
+function clickSeat(key){
+
+  if(state.blockMode){
+
+    if(state.seats[key]){
+      alert("請先將這個座位上的學生移走。");
+      return;
+    }
+
+    if(state.blocked[key]){
+      delete state.blocked[key];
+    }else{
+      state.blocked[key] = true;
+    }
+
+    save();
+    render();
+    return;
+  }
+
+  if(state.blocked[key]) return;
+
+  const occupant = state.seats[key];
+
+  if(!state.selected){
+
+    if(occupant){
+      state.selected = String(occupant);
+      render();
+    }
+
+    return;
+  }
+
+  const moving = state.selected;
+  const oldSeat = findSeatOfStudent(moving);
+
+  if(String(occupant) === String(moving)){
+    state.selected = null;
+    render();
+    return;
+  }
+
+  if(occupant){
+
+    if(oldSeat){
+      state.seats[oldSeat] = occupant;
+    }else{
+      const occupiedOld =
+        findSeatOfStudent(occupant);
+
+      if(occupiedOld)
+        delete state.seats[occupiedOld];
+    }
+
+  }else{
+
+    if(oldSeat)
+      delete state.seats[oldSeat];
+  }
+
+  state.seats[key] = moving;
+
+  state.selected = null;
+
+  save();
+  render();
+}
+
+function renderSeats(){
+
+  const grid = document.getElementById("seatGrid");
+
+  grid.innerHTML = "";
+
+  grid.style.gridTemplateColumns =
+    "repeat("+state.cols+",auto)";
+
+  for(let r=0;r<state.rows;r++){
+
+    for(let c=0;c<state.cols;c++){
+
+      const key = seatKey(r,c);
+
+      const div = document.createElement("div");
+
+      div.className = "seat";
+
+      if(state.blocked[key]){
+
+        div.classList.add("blocked");
+
+        div.textContent = "空位";
+
+      }else if(state.seats[key]){
+
+        const s = getStudent(state.seats[key]);
+
+        div.innerHTML =
+          '<div>'+
+          '<div class="num">'+s.no+'</div>'+
+          '<div class="name">'+s.name+'</div>'+
+          '</div>';
+
+      }else{
+
+        div.classList.add("empty");
+
+        div.textContent = "空";
+
+      }
+
+      div.onclick = function(){
+        clickSeat(key);
+      };
+
+      grid.appendChild(div);
+    }
+  }
+}
+
+function availableSeats(){
+
+  const list = [];
+
+  for(let r=0;r<state.rows;r++){
+
+    for(let c=0;c<state.cols;c++){
+
+      const k = seatKey(r,c);
+
+      if(!state.blocked[k])
+        list.push(k);
+    }
+  }
+
+  return list;
+}
+
+function arrange(ids){
+
+  const slots = availableSeats();
+
+  if(slots.length < students.length){
+
+    alert(
+      "目前只有 " +
+      slots.length +
+      " 個可用座位，不足 27 人。"
+    );
+
+    return;
+  }
+
+  state.seats = {};
+
+  ids.forEach((id,i)=>{
+    state.seats[slots[i]] = id;
+  });
+
+  state.selected = null;
+
+  save();
+  render();
+}
+
+function renderOfficers(){
+
+  const box = document.getElementById("officers");
+
+  box.innerHTML = "";
+
+  officerNames.forEach(name => {
+
+    const wrap = document.createElement("div");
+
+    wrap.className = "officer";
+
+    const label = document.createElement("label");
+
+    label.textContent = name;
+
+    const select = document.createElement("select");
+
+    select.innerHTML =
+      '<option value="">未設定</option>' +
+      students.map(s =>
+        '<option value="'+s.id+'">'+
+        s.no+". "+s.name+
+        '</option>'
+      ).join("");
+
+    select.value =
+      state.officers[name] || "";
+
+    select.onchange = function(){
+
+      state.officers[name] = select.value;
+
+      save();
+
+      renderPrintOfficers();
+    };
+
+    wrap.appendChild(label);
+    wrap.appendChild(select);
+
+    box.appendChild(wrap);
+  });
+
+  renderPrintOfficers();
+}
+
+function renderPrintOfficers(){
+
+  const box =
+    document.getElementById("printOfficers");
+
+  box.innerHTML = "";
+
+  officerNames.forEach(name => {
+
+    const div = document.createElement("div");
+
+    const student =
+      getStudent(state.officers[name]);
+
+    div.innerHTML =
+      "<b>"+name+"</b><br>" +
+      (student
+       ? student.no+" "+student.name
+       : "　");
+
+    box.appendChild(div);
+  });
+}
+
+function renderHistory(){
+
+  const box = document.getElementById("history");
+
+  box.innerHTML = "";
+
+  if(!state.history.length){
+
+    box.innerHTML =
+      '<div class="tip">尚未儲存座位紀錄。</div>';
+
+    return;
+  }
+
+  state.history.forEach((item,index)=>{
+
+    const div =
+      document.createElement("div");
+
+    div.className = "historyItem";
+
+    div.innerHTML =
+      "<b>"+item.name+"</b>"+
+      "<small>"+item.time+"</small>";
+
+    const btn =
+      document.createElement("button");
+
+    btn.textContent = "載入";
+
+    btn.onclick = function(){
+
+      if(!confirm(
+        "載入後會取代目前座位，確定嗎？"
+      )) return;
+
+      state.rows =
+        item.data.rows;
+
+      state.cols =
+        item.data.cols;
+
+      state.seats =
+        {...item.data.seats};
+
+      state.blocked =
+        {...item.data.blocked};
+
+      state.officers =
+        {...item.data.officers};
+
+      state.selected = null;
+
+      save();
+      render();
+    };
+
+    div.appendChild(btn);
+
+    box.appendChild(div);
+  });
+}
+
+function render(){
+
+  document.getElementById("rowsInput").value =
+    state.rows;
+
+  document.getElementById("colsInput").value =
+    state.cols;
+
+  const blockBtn =
+    document.getElementById("blockBtn");
+
+  blockBtn.textContent =
+    "調整空位：" +
+    (state.blockMode ? "開" : "關");
+
+  blockBtn.classList.toggle(
+    "active",
+    state.blockMode
+  );
+
+  renderStudents();
+  renderSeats();
+  renderOfficers();
+  renderHistory();
+}
+
+document.getElementById("resizeBtn").onclick =
+function(){
+
+  const rows =
+    Number(
+      document.getElementById("rowsInput").value
+    );
+
+  const cols =
+    Number(
+      document.getElementById("colsInput").value
+    );
+
+  if(!rows || !cols) return;
+
+  state.rows = rows;
+  state.cols = cols;
+
+  Object.keys(state.seats).forEach(k => {
+
+    const parts = k.split("-");
+
+    const r = Number(parts[0]);
+    const c = Number(parts[1]);
+
+    if(r >= rows || c >= cols)
+      delete state.seats[k];
+  });
+
+  Object.keys(state.blocked).forEach(k => {
+
+    const parts = k.split("-");
+
+    const r = Number(parts[0]);
+    const c = Number(parts[1]);
+
+    if(r >= rows || c >= cols)
+      delete state.blocked[k];
+  });
+
+  save();
+  render();
+};
+
+document.getElementById("blockBtn").onclick =
+function(){
+
+  state.blockMode =
+    !state.blockMode;
+
+  state.selected = null;
+
+  render();
+};
+
+document.getElementById("numberBtn").onclick =
+function(){
+
+  arrange(
+    students.map(s => s.id)
+  );
+};
+
+document.getElementById("randomBtn").onclick =
+function(){
+
+  const ids =
+    students.map(s => s.id);
+
+  for(let i=ids.length-1;i>0;i--){
+
+    const j =
+      Math.floor(Math.random()*(i+1));
+
+    [ids[i],ids[j]] =
+      [ids[j],ids[i]];
+  }
+
+  arrange(ids);
+};
+
+document.getElementById("clearBtn").onclick =
+function(){
+
+  if(!confirm(
+    "確定要清空目前座位嗎？"
+  )) return;
+
+  state.seats = {};
+  state.selected = null;
+
+  save();
+  render();
+};
+
+document.getElementById("saveHistory").onclick =
+function(){
+
+  const defaultName =
+    "第"+(state.history.length+1)+"次座位";
+
+  const name =
+    prompt(
+      "請輸入這次座位表名稱",
+      defaultName
+    );
+
+  if(!name) return;
+
+  const data = {
+    rows:state.rows,
+    cols:state.cols,
+    seats:{...state.seats},
+    blocked:{...state.blocked},
+    officers:{...state.officers}
+  };
+
+  state.history.unshift({
+    name:name,
+    time:new Date().toLocaleString("zh-TW"),
+    data:data
+  });
+
+  state.history =
+    state.history.slice(0,2);
+
+  save();
+  render();
+
+  alert(
+    "已儲存！系統會保留最近 2 次座位表。"
+  );
+};
+
+load();
+render();
+
+</script>
+
+</body>
+</html>
