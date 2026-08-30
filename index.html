@@ -225,37 +225,150 @@ button.active{
   }
 }
 
+.mobileStudentBar{
+  display:none;
+}
+
+#studentPanelBody{
+  display:block;
+}
+
 @media(max-width:699px){
+
+  header{
+    padding:6px 8px;
+  }
+
+  header h1{
+    font-size:16px;
+  }
+
+  header p{
+    display:none;
+  }
+
+  main{
+    padding:4px;
+  }
+
+  .toolbar{
+    display:none;
+  }
+
   .page{
     grid-template-columns:1fr;
+    gap:4px;
   }
 
   #studentPanel{
     position:static;
+    padding:4px 6px;
+    margin:0;
+  }
+
+  .mobileStudentBar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:5px;
+    min-height:34px;
+  }
+
+  #toggleStudentsBtn{
+    padding:5px 8px;
+    font-size:12px;
+  }
+
+  #studentSummary{
+    font-size:11px;
+    color:#666;
+    white-space:nowrap;
+  }
+
+  #studentPanelBody{
+    display:none;
+  }
+
+  #studentPanelBody.open{
+    display:block;
+    margin-top:5px;
+  }
+
+  #studentPanelBody h2{
+    font-size:14px;
+    margin-bottom:5px;
   }
 
   #studentList{
-    display:flex;
-    overflow-x:auto;
-    gap:7px;
-    padding-bottom:6px;
-    -webkit-overflow-scrolling:touch;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:4px;
+    max-height:210px;
+    overflow-y:auto;
   }
 
   .student{
-    flex:0 0 auto;
-    min-width:105px;
+    min-width:0;
+    padding:6px 4px;
+    font-size:12px;
+  }
+
+  .controls{
+    display:none;
+  }
+
+  #seatPanel{
+    padding:4px;
+    margin:0;
+  }
+
+  .front{
+    width:45%;
+    max-width:none;
+    margin:1px auto 4px;
+    padding:4px;
+    font-size:13px;
+  }
+
+  .seatScroll{
+    overflow:visible;
+  }
+
+  #seatGrid{
+    width:100%;
+    min-width:0;
+    grid-template-columns:
+      repeat(5,minmax(0,1fr)) !important;
+    gap:3px;
+  }
+
+  .seat{
+    width:auto;
+    min-width:0;
+    height:48px;
+    padding:2px;
+    border-width:1.5px;
+    border-radius:6px;
+  }
+
+  .seat .num{
+    font-size:12px;
+    line-height:1.05;
+  }
+
+  .seat .name{
+    font-size:10px;
+    line-height:1.1;
+    margin-top:1px;
+  }
+
+  #seatPanel > .tip{
+    display:none;
   }
 
   .officers{
     grid-template-columns:1fr 1fr;
   }
-}
-
-@media(max-width:520px){
-  .seat{width:88px;height:68px}
-  .seat .num{font-size:17px}
-  .seat .name{font-size:13px}
 }
 
 @media print{
@@ -330,10 +443,25 @@ button.active{
 <div class="page">
 
   <section class="panel" id="studentPanel">
+
+  <div class="mobileStudentBar">
+    <button id="toggleStudentsBtn">👤 選學生</button>
+    <span id="studentSummary">
+      已入座 0｜尚未入座 27
+    </span>
+  </div>
+
+  <div id="studentPanelBody">
     <h2>學生名單</h2>
-    <div class="tip" id="message">請先點選一位學生。</div>
+
+    <div class="tip" id="message">
+      請先點選一位學生。
+    </div>
+
     <div id="studentList"></div>
-  </section>
+  </div>
+
+</section>
 
   <section class="panel" id="seatPanel">
 
@@ -465,16 +593,29 @@ function findSeatOfStudent(id){
 
 function renderStudents(){
 
-  const box = document.getElementById("studentList");
+  const box =
+    document.getElementById("studentList");
+
   box.innerHTML = "";
 
   const seated = new Set(
     Object.values(state.seats).map(String)
   );
 
+  const summary =
+    document.getElementById("studentSummary");
+
+  if(summary){
+    summary.textContent =
+      "已入座 " + seated.size +
+      "｜尚未入座 " +
+      (students.length - seated.size);
+  }
+
   students.forEach(s => {
 
-    const b = document.createElement("button");
+    const b =
+      document.createElement("button");
 
     b.className = "student";
 
@@ -484,7 +625,8 @@ function renderStudents(){
     if(seated.has(s.id))
       b.classList.add("seated");
 
-    b.textContent = s.no + ". " + s.name;
+    b.textContent =
+      s.no + ". " + s.name;
 
     b.onclick = function(){
 
@@ -496,24 +638,44 @@ function renderStudents(){
         state.selected = s.id;
       }
 
+      if(
+        window.innerWidth < 700 &&
+        state.selected &&
+        studentPanelBody
+      ){
+        studentPanelBody.classList.remove("open");
+
+        if(toggleStudentsBtn){
+          toggleStudentsBtn.textContent =
+            "👤 選學生";
+        }
+      }
+
       render();
     };
 
     box.appendChild(b);
   });
 
-  const msg = document.getElementById("message");
+  const msg =
+    document.getElementById("message");
 
   if(state.blockMode){
+
     msg.textContent =
       "目前為調整空位模式：請直接點座位。";
+
   }else if(state.selected){
+
     const s = getStudent(state.selected);
 
     msg.textContent =
-      "已選擇：" + s.no + ". " + s.name +
+      "已選擇：" +
+      s.no + ". " + s.name +
       "，請點想安排的位置。";
+
   }else{
+
     msg.textContent =
       "請先點選一位學生。";
   }
@@ -979,6 +1141,23 @@ function(){
   );
 };
 
+const toggleStudentsBtn =
+  document.getElementById("toggleStudentsBtn");
+
+const studentPanelBody =
+  document.getElementById("studentPanelBody");
+
+if(toggleStudentsBtn && studentPanelBody){
+  toggleStudentsBtn.onclick = function(){
+
+    studentPanelBody.classList.toggle("open");
+
+    toggleStudentsBtn.textContent =
+      studentPanelBody.classList.contains("open")
+      ? "收起名單"
+      : "👤 選學生";
+  };
+}
 load();
 render();
 
